@@ -1,6 +1,17 @@
 #pragma once
 #include "Misc/PathfindingDetails.hpp"
 
+
+struct Node
+{
+    Node* m_parentNode;
+    float m_finalCost;
+    float m_givenCost;
+
+    int row;
+    int col;
+};
+
 class AStarPather
 {
 public:
@@ -22,5 +33,10 @@ public:
         It doesn't all need to be in this header and cpp, structure it whatever way
         makes sense to you.
     */
+    std::vector<std::vector<Node*>> grid;
+    std::vector<Node*> openList;
+    std::vector<Node*> closeList;
+
 
 };
+

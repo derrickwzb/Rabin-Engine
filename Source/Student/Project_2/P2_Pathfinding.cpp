@@ -19,10 +19,30 @@ bool ProjectTwo::implemented_jps_plus()
 }
 #pragma endregion
 
+//Node::Node()
+//{
+//    parent = nullptr;
+//    cost = 0;
+//}
+
+inline double heuristic(Node a, Node b) {
+    return std::abs(a.m_gridPos.row - b.m_gridPos.row) + std::abs(a.m_gridPos.col - b.m_gridPos.col);
+}
+
 bool AStarPather::initialize()
 {
     // handle any one-time setup requirements you have
 
+    int mapsize = terrain->get_map_height() * terrain->get_map_width();
+    for (int i = 0; i < terrain->get_map_width(); i++)
+    {
+        for (int j = 0; j < terrain->get_map_height(); j++)
+        {
+            grid[i].push_back(new Node());
+        }
+    }
+    openList.reserve(mapsize);
+    closeList.reserve(mapsize);
     /*
         If you want to do any map-preprocessing, you'll need to listen
         for the map change message.  It'll look something like this:
@@ -48,6 +68,95 @@ void AStarPather::shutdown()
 
 PathResult AStarPather::compute_path(PathRequest &request)
 {
+    /*If(request.newRequest) {
+        Initialize everything.Clear Open / Closed Lists.
+            Push Start Node onto the Open List with cost of f(x) = g(x) + h(x).
+    }
+    While(Open List is not empty) {
+        parentNode = Pop cheapest node off Open List.
+            If parentNode is the Goal Node, then path found(return PathResult::COMPLETE).
+            Place parentNode on the Closed List.
+            For(all neighboring child nodes of parentNode) {
+            Compute its cost, f(x) = g(x) + h(x)
+                If child node isn’t on Open or Closed list, put it on Open List.
+                Else if child node is on Open or Closed List, AND this new one is cheaper,
+                then take the old expensive one off both listsand put this new
+                cheaper one on the Open List.
+        }
+        If taken too much time this frame(or if request.settings.singleStep == true),
+            abort search for nowand resume next frame(return PathResult::PROCESSING).
+    }
+    Open List empty, thus no path possible(return PathResult::IMPOSSIBLE).*/
+    if (request.newRequest)
+    {
+        openList.clear();
+        closeList.clear();
+        GridPos start = terrain->get_grid_position(request.start);
+        Node* startnode = grid[start.row][start.col];
+        startnode->m_gridPos = start;
+        startnode->m_givenCost = 0;
+        startnode->m_finalCost = 0; // final cost
+        startnode->m_parentNode = nullptr;
+        openList.emplace_back(startnode);
+    }
+    while (!openList.empty())
+    {
+        Node* parentnode = openList.back();
+
+        openList.pop_back();
+
+        GridPos goal = terrain->get_grid_position(request.goal);
+        Node* goalnode = grid[goal.row][goal.col];
+        goalnode->m_gridPos = goal;
+
+        if (parentnode == grid[goal.row][goal.col])
+        {
+            return PathResult::COMPLETE;
+        }
+
+        closeList.push_back(parentnode);
+        if (Node* top = grid[parentnode->m_gridPos.row + 1][parentnode->m_gridPos.col])
+        {
+            top->m_finalCost = top->m_givenCost - heuristic(*top, *goalnode);
+        }
+
+        if (Node* topright = grid[parentnode->m_gridPos.row + 1][parentnode->m_gridPos.col + 1])
+        {
+            topright->m_finalCost = topright->m_givenCost - heuristic(*topright, *goalnode);
+        }
+
+        if (Node* topleft = grid[parentnode->m_gridPos.row + 1][parentnode->m_gridPos.col - 1])
+        {
+            topleft->m_finalCost = topleft->m_givenCost - heuristic(*topleft, *goalnode);
+        }
+
+        if (Node* bottom = grid[parentnode->m_gridPos.row - 1][parentnode->m_gridPos.col])
+        {
+            bottom->m_finalCost = bottom->m_givenCost - heuristic(*bottom, *goalnode);
+        }
+
+        if (Node* bottomright = grid[parentnode->m_gridPos.row - 1][parentnode->m_gridPos.col+1])
+        {
+            bottomright->m_finalCost = bottomright->m_givenCost - heuristic(*bottomright, *goalnode);
+        }
+        if (Node* bottomleft = grid[parentnode->m_gridPos.row - 1][parentnode->m_gridPos.col - 1])
+        {
+            bottomleft->m_finalCost = bottomleft->m_givenCost - heuristic(*bottomleft, *goalnode);
+        }
+
+        if (Node* left = grid[parentnode->m_gridPos.row ][parentnode->m_gridPos.col-1])
+        {
+            left->m_finalCost = left->m_givenCost - heuristic(*left, *goalnode);
+        }
+
+        if (Node* right = grid[parentnode->m_gridPos.row][parentnode->m_gridPos.col + 1])
+        {
+            right->m_finalCost = right->m_givenCost - heuristic(*right, *goalnode);
+        }
+        
+
+
+    }
     /*
         This is where you handle pathing requests, each request has several fields:
 
