@@ -4,12 +4,26 @@
 
 struct Node
 {
+    Node() = default;
+    Node(int row, int col)
+    {
+        m_parentNode = nullptr;
+        m_finalCost = 0;
+        m_givenCost = 0;
+        m_gridPos.row = row;
+        m_gridPos.col = col;
+        m_open = false;
+        m_close = false;
+    }
+
     Node* m_parentNode;
     float m_finalCost;
     float m_givenCost;
 
-    int row;
-    int col;
+    GridPos m_gridPos;
+
+    bool m_open;
+    bool m_close;
 };
 
 class AStarPather
@@ -33,9 +47,16 @@ public:
         It doesn't all need to be in this header and cpp, structure it whatever way
         makes sense to you.
     */
+   void checkneighbours(Node* neighbour, Node* parent, float length, PathRequest &request);
+   void mapchange();
+
     std::vector<std::vector<Node*>> grid;
     std::vector<Node*> openList;
     std::vector<Node*> closeList;
+
+    int mapwidth;
+    int mapheight;
+    float sq2;
 
 
 };
