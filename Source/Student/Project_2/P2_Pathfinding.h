@@ -49,6 +49,7 @@ public:
     */
    void checkneighbours(Node* neighbour, Node* parent, float length, PathRequest &request);
    void mapchange();
+   float heuristic(PathRequest& request, const GridPos& a, const GridPos& b);
 
     std::vector<std::vector<Node*>> grid;
     std::vector<Node*> openList;

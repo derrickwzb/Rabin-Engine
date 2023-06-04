@@ -24,8 +24,35 @@ bool ProjectTwo::implemented_jps_plus()
 //    parent = nullptr;
 //    cost = 0;
 //}
-float heuristic(const GridPos& a,const GridPos& b) {
-    return (float)std::abs(a.row - b.row + a.col - b.col);
+float AStarPather::heuristic(PathRequest& request,const GridPos& a,const GridPos& b) {
+    float ydiff = (float)std::abs(b.row - a.row);
+    float xdiff = (float)std::abs(b.col - a.col);
+    switch (request.settings.heuristic)
+    {
+        case Heuristic::MANHATTAN:
+        {
+            return (float)(xdiff + ydiff);
+            break;
+        }
+        case Heuristic::CHEBYSHEV:
+        {
+            return (float)std::max(xdiff, ydiff);
+            break;
+        }
+        case Heuristic::EUCLIDEAN:
+        {
+            return (float)std::sqrt(xdiff*xdiff + ydiff*ydiff);
+            break;
+        }
+        case Heuristic::OCTILE:
+        {
+            return (float)(std::min(xdiff, ydiff) * std::sqrt(2) + std::max(xdiff, ydiff) - std::min(xdiff, ydiff));
+            break;
+        }
+
+    }
+            
+    return 0;
 }
 
 void AStarPather::mapchange()
@@ -42,26 +69,31 @@ void AStarPather::checkneighbours(Node* neighbour , Node* parent, float length ,
         return;
     }
     GridPos goal = terrain->get_grid_position(request.goal);
-    float temp = neighbour->m_givenCost +length + heuristic(neighbour->m_gridPos, goal);
+    float temp = parent->m_givenCost +length + heuristic(request,neighbour->m_gridPos, goal);
     if (!neighbour->m_open && !neighbour->m_close)
     {
         openList.push_back(neighbour);
         terrain->set_color(neighbour->m_gridPos, Colors::Blue);
         neighbour->m_open = true;
+        neighbour->m_close = false;
         neighbour->m_parentNode = parent;
         neighbour->m_givenCost = parent->m_givenCost + length;
-        neighbour->m_finalCost = neighbour->m_givenCost + heuristic(neighbour->m_gridPos, goal );
+        neighbour->m_finalCost = temp;
     }
     else if (neighbour->m_open)
     {
-        for (auto& a : openList)
+        for (int i = 0 ; i< openList.size(); i++)
         {
-            if (a->m_gridPos == neighbour->m_gridPos)
+            if (openList[i]->m_gridPos == neighbour->m_gridPos)
             {
-                if (temp < a->m_finalCost)
+                if (temp < openList[i]->m_finalCost)
                 {
-                    neighbour->m_parentNode = parent;
-                    a = neighbour;
+                    /*neighbour->m_parentNode = parent;
+                    openList[i] = neighbour;*/
+                    openList[i]->m_parentNode = parent;
+                    openList[i]->m_givenCost = parent->m_givenCost + length;
+                    openList[i]->m_finalCost = temp;
+                    
                     
                     break;
 
@@ -85,8 +117,13 @@ void AStarPather::checkneighbours(Node* neighbour , Node* parent, float length ,
         }
         closeList.erase(closeList.begin() + counter);
         neighbour->m_parentNode = parent;
+        neighbour->m_givenCost = parent->m_givenCost + length;
+        neighbour->m_finalCost = temp;
         terrain->set_color(neighbour->m_gridPos, Colors::Blue);
         openList.push_back(neighbour);
+        neighbour->m_open = true;
+        neighbour->m_close = false;
+    
     }
 }
 
@@ -179,7 +216,7 @@ PathResult AStarPather::compute_path(PathRequest &request)
         closeList.clear();
         startnode->m_gridPos = start;
         startnode->m_givenCost = 0;
-        startnode->m_finalCost = startnode->m_givenCost + heuristic(start, goal); // final cost
+        startnode->m_finalCost = startnode->m_givenCost + heuristic(request, start, goal); // final cost
         openList.emplace_back(startnode);
         terrain->set_color(startnode->m_gridPos, Colors::Blue);
     }
@@ -189,7 +226,7 @@ PathResult AStarPather::compute_path(PathRequest &request)
         int minindex = 0;
         for (int i = 0; i < openList.size(); i++)
         {
-            if (openList[i]->m_finalCost <= min)
+            if (openList[i]->m_finalCost < min)
             {
                 minindex = i;
                 min = openList[i]->m_finalCost;
@@ -221,6 +258,8 @@ PathResult AStarPather::compute_path(PathRequest &request)
         }
 
         closeList.push_back(parentnode);
+        parentnode->m_close = true;
+        
         terrain->set_color(parentnode->m_gridPos, Colors::Yellow);
         //check out of bounds
         bool walltop = false;
@@ -231,8 +270,6 @@ PathResult AStarPather::compute_path(PathRequest &request)
         {
             if (Node* top = grid[parentnode->m_gridPos.row + 1][parentnode->m_gridPos.col])
             {
-
-
                /* top->m_givenCost = parentnode->m_givenCost + 1;
                 top->m_finalCost = top->m_givenCost - heuristic(*top, *goalnode);*/
                 checkneighbours(top, parentnode,1 , request);
@@ -306,11 +343,11 @@ PathResult AStarPather::compute_path(PathRequest &request)
                 {
                     //bottomleft->m_givenCost = parentnode->m_givenCost + sq2; //sqrt 2
                     //bottomleft->m_finalCost = bottomleft->m_givenCost - heuristic(*bottomleft, *goalnode);
-                    checkneighbours(bottomleft, parentnode, 1, request);
+                    checkneighbours(bottomleft, parentnode, sq2, request);
                 }
             }
         }
-        if (!walltop && wallright)
+        if (!walltop && !wallright)
         {
             if (parentnode->m_gridPos.row + 1 < mapheight && parentnode->m_gridPos.col + 1 < mapwidth)
             {
@@ -335,13 +372,12 @@ PathResult AStarPather::compute_path(PathRequest &request)
             }
         }
         
+
         if (request.settings.singleStep == true)
         {
             return PathResult::PROCESSING;
         }
-
     }
-        return PathResult::IMPOSSIBLE;
     /*
         This is where you handle pathing requests, each request has several fields:
 
