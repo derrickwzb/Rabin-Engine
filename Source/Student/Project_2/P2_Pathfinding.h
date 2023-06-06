@@ -50,6 +50,9 @@ public:
    void checkneighbours(Node* neighbour, Node* parent, float length, PathRequest &request);
    void mapchange();
    float heuristic(PathRequest& request, const GridPos& a, const GridPos& b);
+   void rubberbanding(PathRequest& request);
+   void smoothing(PathRequest& request);
+   void rubberbandingsmoothing(PathRequest& request);
 
     std::vector<std::vector<Node*>> grid;
     std::vector<Node*> openList;

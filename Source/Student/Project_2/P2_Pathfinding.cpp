@@ -175,25 +175,7 @@ void AStarPather::shutdown()
 
 PathResult AStarPather::compute_path(PathRequest &request)
 {
-    /*If(request.newRequest) {
-        Initialize everything.Clear Open / Closed Lists.
-            Push Start Node onto the Open List with cost of f(x) = g(x) + h(x).
-    }
-    While(Open List is not empty) {
-        parentNode = Pop cheapest node off Open List.
-            If parentNode is the Goal Node, then path found(return PathResult::COMPLETE).
-            Place parentNode on the Closed List.
-            For(all neighboring child nodes of parentNode) {
-            Compute its cost, f(x) = g(x) + h(x)
-                If child node isn’t on Open or Closed list, put it on Open List.
-                Else if child node is on Open or Closed List, AND this new one is cheaper,
-                then take the old expensive one off both listsand put this new
-                cheaper one on the Open List.
-        }
-        If taken too much time this frame(or if request.settings.singleStep == true),
-            abort search for nowand resume next frame(return PathResult::PROCESSING).
-    }
-    Open List empty, thus no path possible(return PathResult::IMPOSSIBLE).*/
+   
     GridPos start = terrain->get_grid_position(request.start);
     Node* startnode = grid[start.row][start.col];
     GridPos goal = terrain->get_grid_position(request.goal);
@@ -216,7 +198,7 @@ PathResult AStarPather::compute_path(PathRequest &request)
         closeList.clear();
         startnode->m_gridPos = start;
         startnode->m_givenCost = 0;
-        startnode->m_finalCost = startnode->m_givenCost + heuristic(request, start, goal); // final cost
+        startnode->m_finalCost = startnode->m_givenCost + heuristic(request, start, goal); 
         openList.emplace_back(startnode);
         terrain->set_color(startnode->m_gridPos, Colors::Blue);
     }
@@ -236,9 +218,6 @@ PathResult AStarPather::compute_path(PathRequest &request)
 
         openList.erase(openList.begin() +minindex);
 
-        /*
-        goalnode->m_gridPos = goal;*/
-
         if (parentnode == grid[goal.row][goal.col])
         {
             Node* temp = parentnode;
@@ -253,6 +232,24 @@ PathResult AStarPather::compute_path(PathRequest &request)
                 }
                 temp = temp->m_parentNode;
             }
+            if (request.settings.rubberBanding && request.settings.smoothing)
+            {
+                rubberbandingsmoothing(request);
+            }
+            else
+            {
+
+                if (request.settings.rubberBanding)
+                {
+                    rubberbanding(request);
+                }
+                else if (request.settings.smoothing)
+                {
+                    smoothing(request);
+                }
+            }
+            
+
             return PathResult::COMPLETE;
 
         }
@@ -261,7 +258,6 @@ PathResult AStarPather::compute_path(PathRequest &request)
         parentnode->m_close = true;
         
         terrain->set_color(parentnode->m_gridPos, Colors::Yellow);
-        //check out of bounds
         bool walltop = false;
         bool wallbot = false;
         bool wallright = false;
@@ -270,8 +266,6 @@ PathResult AStarPather::compute_path(PathRequest &request)
         {
             if (Node* top = grid[parentnode->m_gridPos.row + 1][parentnode->m_gridPos.col])
             {
-               /* top->m_givenCost = parentnode->m_givenCost + 1;
-                top->m_finalCost = top->m_givenCost - heuristic(*top, *goalnode);*/
                 checkneighbours(top, parentnode,1 , request);
                 if (terrain->is_wall(top->m_gridPos))
                 {
@@ -285,8 +279,6 @@ PathResult AStarPather::compute_path(PathRequest &request)
         {
             if (Node* bottom = grid[parentnode->m_gridPos.row - 1][parentnode->m_gridPos.col])
             {
-                /*bottom->m_givenCost = parentnode->m_givenCost + 1;
-                bottom->m_finalCost = bottom->m_givenCost - heuristic(*bottom, *goalnode);*/
                 checkneighbours(bottom, parentnode ,  1, request);
                 if (terrain->is_wall(bottom->m_gridPos))
                 {
@@ -299,8 +291,6 @@ PathResult AStarPather::compute_path(PathRequest &request)
         {
             if (Node* left = grid[parentnode->m_gridPos.row][parentnode->m_gridPos.col - 1])
             {
-                /*left->m_givenCost = parentnode->m_givenCost + 1;
-                left->m_finalCost = left->m_givenCost - heuristic(*left, *goalnode);*/
                 checkneighbours(left, parentnode, 1 ,request);
                 if (terrain->is_wall(left->m_gridPos))
                 {
@@ -312,8 +302,6 @@ PathResult AStarPather::compute_path(PathRequest &request)
         {
             if (Node* right = grid[parentnode->m_gridPos.row][parentnode->m_gridPos.col + 1])
             {
-                /*right->m_givenCost = parentnode->m_givenCost + 1;
-                right->m_finalCost = right->m_givenCost - heuristic(*right, *goalnode);*/
                 checkneighbours(right , parentnode,1,request);
                 if (terrain->is_wall(right->m_gridPos))
                 {
@@ -328,8 +316,6 @@ PathResult AStarPather::compute_path(PathRequest &request)
             {
                 if (Node* bottomright = grid[parentnode->m_gridPos.row - 1][parentnode->m_gridPos.col + 1])
                 {
-                    //bottomright->m_givenCost = parentnode->m_givenCost + sq2; //sqrt 2
-                    //bottomright->m_finalCost = bottomright->m_givenCost - heuristic(*bottomright, *goalnode);
                     checkneighbours(bottomright, parentnode, sq2, request);
 
                 }
@@ -341,8 +327,6 @@ PathResult AStarPather::compute_path(PathRequest &request)
             {
                 if (Node* bottomleft = grid[parentnode->m_gridPos.row - 1][parentnode->m_gridPos.col - 1])
                 {
-                    //bottomleft->m_givenCost = parentnode->m_givenCost + sq2; //sqrt 2
-                    //bottomleft->m_finalCost = bottomleft->m_givenCost - heuristic(*bottomleft, *goalnode);
                     checkneighbours(bottomleft, parentnode, sq2, request);
                 }
             }
@@ -353,8 +337,6 @@ PathResult AStarPather::compute_path(PathRequest &request)
             {
                 if (Node* topright = grid[parentnode->m_gridPos.row + 1][parentnode->m_gridPos.col + 1])
                 {
-                    //topright->m_givenCost = parentnode->m_givenCost + sq2; //sqrt 2
-                    //topright->m_finalCost = topright->m_givenCost - heuristic(*topright, *goalnode);
                     checkneighbours(topright, parentnode, sq2, request);
                 }
             }
@@ -365,8 +347,6 @@ PathResult AStarPather::compute_path(PathRequest &request)
             {
                 if (Node* topleft = grid[parentnode->m_gridPos.row + 1][parentnode->m_gridPos.col - 1])
                 {
-                    //topleft->m_givenCost = parentnode->m_givenCost + sq2; //sqrt 2
-                    //topleft->m_finalCost = topleft->m_givenCost - heuristic(*topleft, *goalnode);
                     checkneighbours(topleft, parentnode, sq2, request);
                 }
             }
@@ -378,48 +358,165 @@ PathResult AStarPather::compute_path(PathRequest &request)
             return PathResult::PROCESSING;
         }
     }
-    /*
-        This is where you handle pathing requests, each request has several fields:
-
-        start/goal - start and goal world positions
-        path - where you will build the path upon completion, path should be
-            start to goal, not goal to start
-        heuristic - which heuristic calculation to use
-        weight - the heuristic weight to be applied
-        newRequest - whether this is the first request for this path, should generally
-            be true, unless single step is on
-
-        smoothing - whether to apply smoothing to the path
-        rubberBanding - whether to apply rubber banding
-        singleStep - whether to perform only a single A* step
-        debugColoring - whether to color the grid based on the A* state:
-            closed list nodes - yellow
-            open list nodes - blue
-
-            use terrain->set_color(row, col, Colors::YourColor);
-            also it can be helpful to temporarily use other colors for specific states
-            when you are testing your algorithms
-
-        method - which algorithm to use: A*, Floyd-Warshall, JPS+, or goal bounding,
-            will be A* generally, unless you implement extra credit features
-
-        The return values are:
-            PROCESSING - a path hasn't been found yet, should only be returned in
-                single step mode until a path is found
-            COMPLETE - a path to the goal was found and has been built in request.path
-            IMPOSSIBLE - a path from start to goal does not exist, do not add start position to path
-    */
-
-    // WRITE YOUR CODE HERE
-
-    
-    // Just sample code, safe to delete
-    /*GridPos start = terrain->get_grid_position(request.start);
-    GridPos goal = terrain->get_grid_position(request.goal);
-    terrain->set_color(start, Colors::Orange);
-    terrain->set_color(goal, Colors::Orange);
-    request.path.push_back(request.start);
-    request.path.push_back(request.goal);
-    return PathResult::COMPLETE;*/
+   
     return PathResult::IMPOSSIBLE;
+}
+
+void AStarPather::rubberbanding(PathRequest& request)
+{
+    WaypointList& paths = request.path;
+    WaypointList::iterator it;
+    for (it = paths.begin(); it != paths.end(); ) {
+        GridPos first, second, third;
+        if (it == paths.end() || std::next(it, 1) == paths.end() || std::next(it, 2) == paths.end())
+        {
+            break;
+        }
+        first = terrain->get_grid_position(*it) ;
+        second = terrain->get_grid_position(*(std::next(it, 1)));
+        third = terrain->get_grid_position(*(std::next(it, 2)));
+        
+        GridPos max, min; 
+        max.row = std::max(first.row, third.row);
+        max.col = std::max(first.col, third.col);
+        min.row = std::min(first.row, third.row);
+        min.col = std::min(first.col, third.col);
+        bool tobreak = false;
+        for (int i = min.row; i <= max.row; i++)
+        {
+            for (int j = min.col; j <= max.col; j++)
+            {
+                if (terrain->is_wall(grid[i][j]->m_gridPos))
+                {
+                    tobreak = true;
+                    break;
+                }
+                
+            }
+            if (tobreak)
+            {
+                break;
+            }
+        }
+        if (tobreak)
+        {
+            ++it;
+            continue;
+        }
+        paths.erase((std::next(it, 1)));
+    }
+}
+
+void AStarPather::smoothing(PathRequest& request)
+{
+    if (request.path.size() < 2)
+    {
+        return;
+    }
+    WaypointList& paths = request.path;
+    WaypointList::iterator it = paths.begin();
+    float t1 = 0.25f;
+    float t2 = 0.5f;
+    float t3 = 0.75f;
+    WaypointList::iterator p1, p2, p3, p4;
+    WaypointList::iterator pathend = std::prev(paths.end());
+    if (paths.size() == 2)
+    {
+            p1 = it;
+            p2 = it;
+            p3 = (std::next(it, 1));
+            p4 = (std::next(it, 1));
+    }
+    else
+    {
+            p1 = it;
+            p2 = it;
+            p3 = (std::next(it, 1));
+            p4 = (std::next(it, 2));
+
+    }
+    
+    for (it = paths.begin(); it != paths.end(); ) {
+        paths.insert(p3,Vec3::CatmullRom(*p1,*p2,*p3,*p4,t1));
+        paths.insert(p3, Vec3::CatmullRom(*p1, *p2, *p3, *p4, t2));
+        paths.insert(p3, Vec3::CatmullRom(*p1, *p2, *p3, *p4, t3));
+
+        if (p3 == pathend)
+        {
+            break;
+        }
+       
+        // if at the start
+        if (p2 == p1)
+        {
+            p2 = p3;
+            p3 = p4;
+            if (p4 != pathend)
+            {
+                ++p4;
+            }
+        }
+        //if not at start/ towards end
+        else
+        {
+           
+            p1 = p2;
+            p2 = p3;
+            p3 = p4;
+            if (p4 != pathend)
+            {
+                ++p4;
+            }
+
+        }
+        
+    }
+
+}
+
+void AStarPather::rubberbandingsmoothing(PathRequest& request)
+{
+    WaypointList& path = request.path;
+    if (path.size() <= 2)
+    {
+        return;
+    }
+
+    Vec3 diffsize = terrain->get_world_position(GridPos{ 0,0 }) - terrain->get_world_position(GridPos{ 0,1 });
+    float griddistance = 1.5f * diffsize.Length();
+
+    rubberbanding(request);
+
+    WaypointList::iterator it, it2;
+    it = path.begin();
+    it2 = std::next(it, 1);
+
+    Vec3 distance, midpoint;
+
+    while (it2 != path.end())
+    {
+        distance = *it - *it2;
+
+        
+        if (distance.Length() > griddistance)
+        {
+            midpoint = ( * it + *it2) * 0.5f;
+
+            path.insert(it2, midpoint);
+            --it2;
+
+            if (it == it2)
+            {
+                ++it;
+                ++it2;
+            }
+        }
+        else
+        {
+            ++it;
+            ++it2;
+        }
+    }
+
+    smoothing(request);
 }
