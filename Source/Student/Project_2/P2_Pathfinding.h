@@ -1,7 +1,6 @@
 #pragma once
 #include "Misc/PathfindingDetails.hpp"
 
-
 struct Node
 {
     Node() = default;
@@ -17,6 +16,8 @@ struct Node
         dirty = false;
     }
 
+    void precomputeneighbours(Node* node, const int& mapwidth, const int& mapheight);
+
     Node* m_parentNode;
     float m_finalCost;
     float m_givenCost;
@@ -26,9 +27,57 @@ struct Node
     bool m_open;
     bool m_close;
     bool dirty;
-    uint8_t m_valid_walls;
+    uint8_t m_validneighbours = 0;
 
 };
+
+class FastArray
+{
+public:
+
+    Node* PopCheapest()
+    {
+        if (m_lastindex == -1)
+        {
+            return nullptr;
+        }
+        float min = m_data[0]->m_finalCost;
+        int minindex = 0;
+        for (int i = 0; i < m_lastindex; i++)
+        {
+            if (m_data[i]->m_finalCost < min)
+            {
+                min = m_data[i]->m_finalCost;
+                minindex = i;
+            }
+        }
+        std::swap(m_data[minindex], m_data[m_lastindex]);
+        --m_lastindex;
+        return m_data[m_lastindex + 1];
+    }
+    void Push(Node* node)
+    {
+        ++m_lastindex;
+        m_data[m_lastindex] = node;
+    }
+    bool Empty()
+    {
+        return (m_lastindex == -1);
+    }
+    void ClearList()
+    {
+        m_lastindex = -1;
+    }
+
+
+private:
+    short m_lastindex = -1;
+    Node* m_data[1600];
+
+};
+
+
+
 
 class AStarPather
 {
@@ -57,10 +106,10 @@ public:
    void rubberbanding(PathRequest& request);
    void smoothing(PathRequest& request);
    void rubberbandingsmoothing(PathRequest& request);
+   
 
     std::vector<std::vector<Node*>> grid;
-    std::vector<Node*> openList;
-    std::vector<Node*> closeList;
+    FastArray openList;
 
     int mapwidth;
     int mapheight;
