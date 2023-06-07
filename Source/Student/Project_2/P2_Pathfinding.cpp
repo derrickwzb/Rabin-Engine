@@ -49,6 +49,15 @@ float AStarPather::heuristic(PathRequest& request,const GridPos& a,const GridPos
             return (float)(std::min(xdiff, ydiff) * std::sqrt(2) + std::max(xdiff, ydiff) - std::min(xdiff, ydiff));
             break;
         }
+        case Heuristic::INCONSISTENT:
+        {
+            if ((a.row + a.col) % 2 > 0)
+            {
+                return  (float)std::sqrt(xdiff * xdiff + ydiff * ydiff);
+            }
+            return 0;
+            break;
+        }
 
     }
             
@@ -91,24 +100,6 @@ void AStarPather::checkneighbours(Node* neighbour , Node* parent, float length ,
             neighbour->m_givenCost = parent->m_givenCost + length;
             neighbour->m_finalCost = temp;
         }
-        /*for (int i = 0 ; i< openList.size(); i++)
-        {
-            if (openList[i]->m_gridPos == neighbour->m_gridPos)
-            {
-                if (temp < openList[i]->m_finalCost)
-                {
-
-                    openList[i]->m_parentNode = parent;
-                    openList[i]->m_givenCost = parent->m_givenCost + length;
-                    openList[i]->m_finalCost = temp;
-                    
-                    
-                    break;
-
-                }
-            }
-        }*/
-
     }
     else if (neighbour->m_close)
     {
@@ -125,22 +116,7 @@ void AStarPather::checkneighbours(Node* neighbour , Node* parent, float length ,
             neighbour->m_open = true;
             neighbour->m_close = false;
             neighbour->dirty = true;
-        }
-        /*int counter = 0;
-        for (int i = 0; i < closeList.size(); i++)
-        {
-            if (closeList[i]->m_gridPos == neighbour->m_gridPos)
-            {
-                if (temp < closeList[i]->m_finalCost)
-                {
-                    counter = i;
-                    break;
-                }
-            }
-        }*/
-        //closeList.erase(closeList.begin() + counter);
-        
-    
+        } 
     }
 }
 
@@ -162,7 +138,6 @@ bool AStarPather::initialize()
         grid.push_back(row);
     }
     openList.reserve(mapsize);
-    //closeList.reserve(mapsize);
 
     sq2 = (float)std::sqrt(2);
     /*
@@ -217,11 +192,11 @@ PathResult AStarPather::compute_path(PathRequest &request)
             }
         }
         openList.clear();
-        //closeList.clear();
         startnode->m_gridPos = start;
         startnode->m_givenCost = 0;
         startnode->m_finalCost = startnode->m_givenCost + heuristic(request, start, goal); 
         startnode->dirty = true;
+        startnode->m_open = true;
         openList.emplace_back(startnode);
         if (request.settings.debugColoring)
         {
@@ -241,8 +216,10 @@ PathResult AStarPather::compute_path(PathRequest &request)
             }
         }
         Node* parentnode = openList[minindex];
+        parentnode->m_open = false;
 
         openList.erase(openList.begin() +minindex);
+
 
         if (parentnode == grid[goal.row][goal.col])
         {
