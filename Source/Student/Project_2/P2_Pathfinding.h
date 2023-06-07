@@ -14,6 +14,7 @@ struct Node
         m_gridPos.col = col;
         m_open = false;
         m_close = false;
+        dirty = false;
     }
 
     Node* m_parentNode;
@@ -24,6 +25,9 @@ struct Node
 
     bool m_open;
     bool m_close;
+    bool dirty;
+    uint8_t m_valid_walls;
+
 };
 
 class AStarPather

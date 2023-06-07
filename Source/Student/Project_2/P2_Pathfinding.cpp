@@ -72,24 +72,32 @@ void AStarPather::checkneighbours(Node* neighbour , Node* parent, float length ,
     float temp = parent->m_givenCost +length + heuristic(request,neighbour->m_gridPos, goal);
     if (!neighbour->m_open && !neighbour->m_close)
     {
-        openList.push_back(neighbour);
-        terrain->set_color(neighbour->m_gridPos, Colors::Blue);
+        openList.emplace_back(neighbour);
+        if (request.settings.debugColoring)
+        {
+            terrain->set_color(neighbour->m_gridPos, Colors::Blue);
+        }
         neighbour->m_open = true;
         neighbour->m_close = false;
         neighbour->m_parentNode = parent;
         neighbour->m_givenCost = parent->m_givenCost + length;
         neighbour->m_finalCost = temp;
+        neighbour->dirty = true;
     }
     else if (neighbour->m_open)
     {
-        for (int i = 0 ; i< openList.size(); i++)
+        if (temp < neighbour->m_finalCost) {
+            neighbour->m_parentNode = parent;
+            neighbour->m_givenCost = parent->m_givenCost + length;
+            neighbour->m_finalCost = temp;
+        }
+        /*for (int i = 0 ; i< openList.size(); i++)
         {
             if (openList[i]->m_gridPos == neighbour->m_gridPos)
             {
                 if (temp < openList[i]->m_finalCost)
                 {
-                    /*neighbour->m_parentNode = parent;
-                    openList[i] = neighbour;*/
+
                     openList[i]->m_parentNode = parent;
                     openList[i]->m_givenCost = parent->m_givenCost + length;
                     openList[i]->m_finalCost = temp;
@@ -99,11 +107,26 @@ void AStarPather::checkneighbours(Node* neighbour , Node* parent, float length ,
 
                 }
             }
-        }
+        }*/
+
     }
     else if (neighbour->m_close)
     {
-        int counter = 0;
+        if (temp < neighbour->m_finalCost)
+        {
+            neighbour->m_parentNode = parent;
+            neighbour->m_givenCost = parent->m_givenCost + length;
+            neighbour->m_finalCost = temp;
+            if (request.settings.debugColoring)
+            {
+                terrain->set_color(neighbour->m_gridPos, Colors::Blue);
+            }
+            openList.emplace_back(neighbour);
+            neighbour->m_open = true;
+            neighbour->m_close = false;
+            neighbour->dirty = true;
+        }
+        /*int counter = 0;
         for (int i = 0; i < closeList.size(); i++)
         {
             if (closeList[i]->m_gridPos == neighbour->m_gridPos)
@@ -114,15 +137,9 @@ void AStarPather::checkneighbours(Node* neighbour , Node* parent, float length ,
                     break;
                 }
             }
-        }
-        closeList.erase(closeList.begin() + counter);
-        neighbour->m_parentNode = parent;
-        neighbour->m_givenCost = parent->m_givenCost + length;
-        neighbour->m_finalCost = temp;
-        terrain->set_color(neighbour->m_gridPos, Colors::Blue);
-        openList.push_back(neighbour);
-        neighbour->m_open = true;
-        neighbour->m_close = false;
+        }*/
+        //closeList.erase(closeList.begin() + counter);
+        
     
     }
 }
@@ -145,7 +162,7 @@ bool AStarPather::initialize()
         grid.push_back(row);
     }
     openList.reserve(mapsize);
-    closeList.reserve(mapsize);
+    //closeList.reserve(mapsize);
 
     sq2 = (float)std::sqrt(2);
     /*
@@ -186,21 +203,30 @@ PathResult AStarPather::compute_path(PathRequest &request)
         {
             for (int j = 0; j < grid[i].size(); j++)
             {
-                grid[i][j]->m_parentNode = nullptr; 
-                grid[i][j]->m_givenCost = 0;
-                grid[i][j]->m_finalCost = 0;
-                grid[i][j]->m_open = false;
-                grid[i][j]->m_close = false;
+                if (grid[i][j]->dirty)
+                {
+                    grid[i][j]->m_parentNode = nullptr; 
+                    grid[i][j]->m_givenCost = 0;
+                    grid[i][j]->m_finalCost = 0;
+                    grid[i][j]->m_open = false;
+                    grid[i][j]->m_close = false;
+                    grid[i][j]->dirty = false;
+
+                }
 
             }
         }
         openList.clear();
-        closeList.clear();
+        //closeList.clear();
         startnode->m_gridPos = start;
         startnode->m_givenCost = 0;
         startnode->m_finalCost = startnode->m_givenCost + heuristic(request, start, goal); 
+        startnode->dirty = true;
         openList.emplace_back(startnode);
-        terrain->set_color(startnode->m_gridPos, Colors::Blue);
+        if (request.settings.debugColoring)
+        {
+            terrain->set_color(startnode->m_gridPos, Colors::Blue);
+        }
     }
     while (!openList.empty())
     {
@@ -254,10 +280,13 @@ PathResult AStarPather::compute_path(PathRequest &request)
 
         }
 
-        closeList.push_back(parentnode);
+        //closeList.push_back(parentnode);
         parentnode->m_close = true;
         
-        terrain->set_color(parentnode->m_gridPos, Colors::Yellow);
+        if (request.settings.debugColoring)
+        {
+            terrain->set_color(parentnode->m_gridPos, Colors::Yellow);
+        }
         bool walltop = false;
         bool wallbot = false;
         bool wallright = false;
