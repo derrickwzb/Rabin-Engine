@@ -16,7 +16,7 @@ struct Node
         dirty = false;
     }
 
-    void precomputeneighbours(Node* node, const int& mapwidth, const int& mapheight);
+     void precomputeneighbours(const int& mapwidth, const int& mapheight);
 
     Node* m_parentNode;
     float m_finalCost;
@@ -100,9 +100,94 @@ public:
         It doesn't all need to be in this header and cpp, structure it whatever way
         makes sense to you.
     */
-   void checkneighbours(Node* neighbour, Node* parent, float length, PathRequest &request);
+   inline void checkneighbours(Node* neighbour, Node* parent, float length, PathRequest &request)
+   {
+       float heuristic1 = 0;
+       GridPos goal = terrain->get_grid_position(request.goal);
+
+       float ydiff = (float)std::abs(goal.row - neighbour->m_gridPos.row);
+       float xdiff = (float)std::abs(goal.col - neighbour->m_gridPos.col);
+
+       switch (request.settings.heuristic)
+       {
+       case Heuristic::MANHATTAN:
+       {
+           heuristic1 = (float)(xdiff + ydiff);
+           break;
+       }
+       case Heuristic::CHEBYSHEV:
+       {
+           heuristic1 = (float)std::max(xdiff, ydiff);
+           break;
+       }
+       case Heuristic::EUCLIDEAN:
+       {
+           heuristic1 = (float)std::sqrt(xdiff * xdiff + ydiff * ydiff);
+           break;
+       }
+       case Heuristic::OCTILE:
+       {
+           heuristic1 = (float)(std::min(xdiff, ydiff) * sq2 + std::max(xdiff, ydiff) - std::min(xdiff, ydiff));
+           break;
+       }
+       case Heuristic::INCONSISTENT:
+       {
+           if ((neighbour->m_gridPos.row + neighbour->m_gridPos.col) % 2 > 0)
+           {
+               heuristic1 = (float)std::sqrt(xdiff * xdiff + ydiff * ydiff);
+           }
+           else
+           {
+
+               heuristic1 = 0;
+           }
+           break;
+       }
+
+       }
+       float temp = parent->m_givenCost + length + heuristic1;
+       if (!neighbour->m_open && !neighbour->m_close)
+       {
+           openList.Push(neighbour);
+           if (request.settings.debugColoring)
+           {
+               terrain->set_color(neighbour->m_gridPos, Colors::Blue);
+           }
+           neighbour->m_open = true;
+           neighbour->m_close = false;
+           neighbour->m_parentNode = parent;
+           neighbour->m_givenCost = parent->m_givenCost + length;
+           neighbour->m_finalCost = temp;
+           neighbour->dirty = true;
+       }
+       else if (neighbour->m_open)
+       {
+           if (temp < neighbour->m_finalCost) {
+               neighbour->m_parentNode = parent;
+               neighbour->m_givenCost = parent->m_givenCost + length;
+               neighbour->m_finalCost = temp;
+           }
+       }
+       else if (neighbour->m_close)
+       {
+           if (temp < neighbour->m_finalCost)
+           {
+               neighbour->m_parentNode = parent;
+               neighbour->m_givenCost = parent->m_givenCost + length;
+               neighbour->m_finalCost = temp;
+               if (request.settings.debugColoring)
+               {
+                   terrain->set_color(neighbour->m_gridPos, Colors::Blue);
+               }
+               openList.Push(neighbour);
+               neighbour->m_open = true;
+               neighbour->m_close = false;
+               neighbour->dirty = true;
+           }
+       }
+   }
    void mapchange();
-   float heuristic(PathRequest& request, const GridPos& a, const GridPos& b);
+   /*float heuristic(PathRequest& request, const GridPos& a, const GridPos& b);*/
    void rubberbanding(PathRequest& request);
    void smoothing(PathRequest& request);
    void rubberbandingsmoothing(PathRequest& request);

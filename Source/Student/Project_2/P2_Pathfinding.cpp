@@ -19,122 +19,160 @@ bool ProjectTwo::implemented_jps_plus()
 }
 #pragma endregion
 
-void Node::precomputeneighbours(Node* node, const int& mapwidth, const int& mapheight)
+void Node::precomputeneighbours(const int& mapwidth, const int& mapheight)
 {
+    m_validneighbours = 0;
     bool top = false;
     bool right = false;
     bool left = false;
     bool bottom = false;
     //top
-    if (node->m_gridPos.row + 1 < mapheight)
+    if (m_gridPos.row + 1 < mapheight)
     {
-        if (!terrain->is_wall({ node->m_gridPos.row + 1, node->m_gridPos.col }))
+        if (!terrain->is_wall({ m_gridPos.row + 1, m_gridPos.col }))
         {
-            node->m_validneighbours |= (1 << 7);
+            m_validneighbours |= (1 << 7);
         }
         else
         {
             top = true;
         }
     }
-}
 
-float AStarPather::heuristic(PathRequest& request,const GridPos& a,const GridPos& b) {
-    float ydiff = (float)std::abs(b.row - a.row);
-    float xdiff = (float)std::abs(b.col - a.col);
-    switch (request.settings.heuristic)
+    if (m_gridPos.row - 1 >= 0)
     {
-        case Heuristic::MANHATTAN:
+        if (!terrain->is_wall({ m_gridPos.row - 1, m_gridPos.col }))
         {
-            return (float)(xdiff + ydiff);
-            break;
+            m_validneighbours |= (1 << 6);
         }
-        case Heuristic::CHEBYSHEV:
+        else
         {
-            return (float)std::max(xdiff, ydiff);
-            break;
+            bottom = true;
         }
-        case Heuristic::EUCLIDEAN:
-        {
-            return (float)std::sqrt(xdiff*xdiff + ydiff*ydiff);
-            break;
-        }
-        case Heuristic::OCTILE:
-        {
-            return (float)(std::min(xdiff, ydiff) * sq2 + std::max(xdiff, ydiff) - std::min(xdiff, ydiff));
-            break;
-        }
-        case Heuristic::INCONSISTENT:
-        {
-            if ((a.row + a.col) % 2 > 0)
-            {
-                return  (float)std::sqrt(xdiff * xdiff + ydiff * ydiff);
-            }
-            return 0;
-            break;
-        }
-
     }
-            
-    return 0;
+    if (m_gridPos.col - 1 >= 0)
+    {
+        if (!terrain->is_wall({ m_gridPos.row,m_gridPos.col - 1 }))
+        {
+            m_validneighbours |= (1 << 5);
+        }
+        else
+        {
+            left = true;
+        } 
+    }
+    if (m_gridPos.col + 1 < mapwidth)
+    {
+        if (!terrain->is_wall({ m_gridPos.row,m_gridPos.col + 1 }))
+        {
+            m_validneighbours |= (1 << 4);
+        }
+        else
+        {
+            right = true;
+        }
+    }
+
+    //topright
+    if (!top && !right)
+    {
+        if (m_gridPos.row + 1 < mapheight && m_gridPos.col + 1 < mapwidth)
+        {
+            if (!terrain->is_wall({ m_gridPos.row + 1, m_gridPos.col + 1 }))
+            {
+                m_validneighbours |= (1 << 3);
+            }
+        }
+    }
+    //topleft
+    if (!top && !left)
+    {
+        if (m_gridPos.row + 1 < mapheight && m_gridPos.col - 1 >= 0)
+        {
+            if (!terrain->is_wall({ m_gridPos.row + 1, m_gridPos.col - 1 }))
+            {
+                m_validneighbours |= (1 << 2);
+            }
+        }
+    }
+    //bottomright
+    if (!bottom && !right)
+    {
+        if (m_gridPos.row - 1 >= 0 && m_gridPos.col + 1 < mapwidth)
+        {
+            if (!terrain->is_wall({ m_gridPos.row - 1,m_gridPos.col + 1 }))
+            {
+                m_validneighbours |= (1 << 1);
+            }
+        }
+    }
+    if (!bottom && !left)
+    {
+        if (m_gridPos.row - 1 >= 0 && m_gridPos.col - 1 >= 0)
+        {
+            if (!terrain->is_wall({ m_gridPos.row - 1 , m_gridPos.col - 1 }))
+            {
+                m_validneighbours |= (1 << 0);
+            }
+        }
+    }
+
+
 }
+
+//float AStarPather::heuristic(PathRequest& request,const GridPos& a,const GridPos& b) {
+//    float ydiff = (float)std::abs(b.row - a.row);
+//    float xdiff = (float)std::abs(b.col - a.col);
+//    switch (request.settings.heuristic)
+//    {
+//        case Heuristic::MANHATTAN:
+//        {
+//            return (float)(xdiff + ydiff);
+//            break;
+//        }
+//        case Heuristic::CHEBYSHEV:
+//        {
+//            return (float)std::max(xdiff, ydiff);
+//            break;
+//        }
+//        case Heuristic::EUCLIDEAN:
+//        {
+//            return (float)std::sqrt(xdiff*xdiff + ydiff*ydiff);
+//            break;
+//        }
+//        case Heuristic::OCTILE:
+//        {
+//            return (float)(std::min(xdiff, ydiff) * sq2 + std::max(xdiff, ydiff) - std::min(xdiff, ydiff));
+//            break;
+//        }
+//        case Heuristic::INCONSISTENT:
+//        {
+//            if ((a.row + a.col) % 2 > 0)
+//            {
+//                return  (float)std::sqrt(xdiff * xdiff + ydiff * ydiff);
+//            }
+//            return 0;
+//            break;
+//        }
+//
+//    }
+//            
+//    return 0;
+//}
 
 void AStarPather::mapchange()
 {
 
     mapwidth = terrain->get_map_width();
     mapheight = terrain->get_map_height();
-}
-
-void AStarPather::checkneighbours(Node* neighbour , Node* parent, float length , PathRequest &request)
-{
-    /*if (terrain->is_wall(neighbour->m_gridPos))
+    for (int i = 0; i < mapwidth; i++)
     {
-        return;
-    }*/
-    GridPos goal = terrain->get_grid_position(request.goal);
-    float temp = parent->m_givenCost +length + heuristic(request,neighbour->m_gridPos, goal);
-    if (!neighbour->m_open && !neighbour->m_close)
-    {
-        openList.Push(neighbour);
-        if (request.settings.debugColoring)
+        for (int j = 0; j < mapwidth; j++)
         {
-            terrain->set_color(neighbour->m_gridPos, Colors::Blue);
-        }
-        neighbour->m_open = true;
-        neighbour->m_close = false;
-        neighbour->m_parentNode = parent;
-        neighbour->m_givenCost = parent->m_givenCost + length;
-        neighbour->m_finalCost = temp;
-        neighbour->dirty = true;
-    }
-    else if (neighbour->m_open)
-    {
-        if (temp < neighbour->m_finalCost) {
-            neighbour->m_parentNode = parent;
-            neighbour->m_givenCost = parent->m_givenCost + length;
-            neighbour->m_finalCost = temp;
+            grid[i][j]->precomputeneighbours(mapwidth, mapheight);
         }
     }
-    else if (neighbour->m_close)
-    {
-        if (temp < neighbour->m_finalCost)
-        {
-            neighbour->m_parentNode = parent;
-            neighbour->m_givenCost = parent->m_givenCost + length;
-            neighbour->m_finalCost = temp;
-            if (request.settings.debugColoring)
-            {
-                terrain->set_color(neighbour->m_gridPos, Colors::Blue);
-            }
-            openList.Push(neighbour);
-            neighbour->m_open = true;
-            neighbour->m_close = false;
-            neighbour->dirty = true;
-        } 
-    }
 }
-
 
 bool AStarPather::initialize()
 {
@@ -207,7 +245,46 @@ PathResult AStarPather::compute_path(PathRequest &request)
         openList.ClearList();
         startnode->m_gridPos = start;
         startnode->m_givenCost = 0;
-        startnode->m_finalCost = startnode->m_givenCost + heuristic(request, start, goal); 
+        float heuristic2 = 0;
+        float ydiff = (float)std::abs(goal.row - startnode->m_gridPos.row);
+        float xdiff = (float)std::abs(goal.col - startnode->m_gridPos.col);
+        switch (request.settings.heuristic)
+        {
+        case Heuristic::MANHATTAN:
+        {
+            heuristic2 = (float)(xdiff + ydiff);
+            break;
+        }
+        case Heuristic::CHEBYSHEV:
+        {
+            heuristic2 = (float)std::max(xdiff, ydiff);
+            break;
+        }
+        case Heuristic::EUCLIDEAN:
+        {
+            heuristic2 = (float)std::sqrt(xdiff * xdiff + ydiff * ydiff);
+            break;
+        }
+        case Heuristic::OCTILE:
+        {
+            heuristic2 = (float)(std::min(xdiff, ydiff) * sq2 + std::max(xdiff, ydiff) - std::min(xdiff, ydiff));
+            break;
+        }
+        case Heuristic::INCONSISTENT:
+        {
+            if ((startnode->m_gridPos.row + startnode->m_gridPos.col) % 2 > 0)
+            {
+                heuristic2 = (float)std::sqrt(xdiff * xdiff + ydiff * ydiff);
+            }
+            else
+            {
+
+                heuristic2 = 0;
+            }
+            break;
+        }
+        }
+        startnode->m_finalCost = startnode->m_givenCost + heuristic2; 
         startnode->dirty = true;
         startnode->m_open = true;
         openList.Push(startnode);
@@ -262,125 +339,76 @@ PathResult AStarPather::compute_path(PathRequest &request)
         if (request.settings.debugColoring)
         {
             terrain->set_color(parentnode->m_gridPos, Colors::Yellow);
-        }
-        bool walltop = false;
-        bool wallbot = false;
-        bool wallright = false;
-        bool wallleft = false;
-        if (parentnode->m_gridPos.row + 1 < mapheight)
+        }        
+
+        if (parentnode->m_validneighbours & (1 << 7))
         {
-            if (Node* top = grid[parentnode->m_gridPos.row + 1][parentnode->m_gridPos.col])
+            Node* top = grid[parentnode->m_gridPos.row + 1][parentnode->m_gridPos.col];
+            if (parentnode->m_parentNode != top)
             {
-                
-                if (terrain->is_wall(top->m_gridPos))
-                {
-                    walltop = true;
-                }else
-                    checkneighbours(top, parentnode, 1, request);
+                checkneighbours(top, parentnode, 1, request);
+            }      
+        }
+        if (parentnode->m_validneighbours & (1 << 6))
+        {
+            Node* bottom = grid[parentnode->m_gridPos.row - 1][parentnode->m_gridPos.col];
+            if (parentnode->m_parentNode != bottom)
+            {
+
+                checkneighbours(bottom, parentnode, 1, request);
+            }
+        }
+        if (parentnode->m_validneighbours & (1 << 5))
+        {
+            Node* left = grid[parentnode->m_gridPos.row][parentnode->m_gridPos.col - 1];
+            if (parentnode->m_parentNode != left)
+            {
+                checkneighbours(left, parentnode, 1, request);
+            }
+        }
+        if (parentnode->m_validneighbours & (1 << 4))
+        {
+            Node* right = grid[parentnode->m_gridPos.row][parentnode->m_gridPos.col + 1];
+            if (parentnode->m_parentNode != right)
+            {
+                checkneighbours(right, parentnode, 1, request);
+            }
+        }
+        if (parentnode->m_validneighbours & (1 << 3))
+        {
+            Node* topright = grid[parentnode->m_gridPos.row + 1][parentnode->m_gridPos.col + 1];
+            if (parentnode->m_parentNode != topright)
+            {
+                checkneighbours(topright, parentnode, sq2, request);
+            }
+        }
+        if (parentnode->m_validneighbours & (1 << 2))
+        {
+            Node* topleft = grid[parentnode->m_gridPos.row + 1][parentnode->m_gridPos.col - 1];
+            if (parentnode->m_parentNode != topleft)
+            {
+                checkneighbours(topleft, parentnode, sq2, request);
+            }
+        }
+        if (parentnode->m_validneighbours & (1 << 1))
+        {
+            Node* bottomright = grid[parentnode->m_gridPos.row - 1][parentnode->m_gridPos.col + 1];
+            if (parentnode->m_parentNode != bottomright)
+            {
+            checkneighbours(bottomright, parentnode, sq2, request);
 
             }
         }
-        
-        if (parentnode->m_gridPos.row - 1 >= 0)
+        if (parentnode->m_validneighbours & (1 << 0))
         {
-            if (Node* bottom = grid[parentnode->m_gridPos.row - 1][parentnode->m_gridPos.col])
+            Node* bottomleft = grid[parentnode->m_gridPos.row - 1][parentnode->m_gridPos.col - 1];
+            if (parentnode->m_parentNode != bottomleft)
             {
-                
-                if (terrain->is_wall(bottom->m_gridPos))
-                {
-                    wallbot = true;
-                }
-                else
-                {
-                    checkneighbours(bottom, parentnode, 1, request);
-                }
-            }
-        }
-        
-        if (parentnode->m_gridPos.col - 1 >= 0)
-        {
-            if (Node* left = grid[parentnode->m_gridPos.row][parentnode->m_gridPos.col - 1])
-            {
-                
-                if (terrain->is_wall(left->m_gridPos))
-                {
-                    wallleft = true;
-                }
-                else
-                {
-                    checkneighbours(left, parentnode, 1, request);
-                }
-            }
-        }
-        if (parentnode->m_gridPos.col + 1 < mapwidth)
-        {
-            if (Node* right = grid[parentnode->m_gridPos.row][parentnode->m_gridPos.col + 1])
-            {
-                
-                if (terrain->is_wall(right->m_gridPos))
-                {
-                    wallright = true;
-                }
-                else
-                {
-                    checkneighbours(right, parentnode, 1, request);
-                }
+
+            checkneighbours(bottomleft, parentnode, sq2, request);
             }
         }
 
-        if (!wallbot && !wallright)
-        {
-            if (parentnode->m_gridPos.row - 1 >= 0 && parentnode->m_gridPos.col + 1 < mapwidth)
-            {
-                if (Node* bottomright = grid[parentnode->m_gridPos.row - 1][parentnode->m_gridPos.col + 1])
-                {
-                    if (!terrain->is_wall(bottomright->m_gridPos))
-                    {
-                        checkneighbours(bottomright, parentnode, sq2, request);
-                    }
-
-                }
-            }
-        }
-        if(!wallbot && !wallleft)
-        {
-            if (parentnode->m_gridPos.row - 1 >= 0 && parentnode->m_gridPos.col - 1 >= 0)
-            {
-                if (Node* bottomleft = grid[parentnode->m_gridPos.row - 1][parentnode->m_gridPos.col - 1])
-                {
-                    if (!terrain->is_wall(bottomleft->m_gridPos))
-                    {
-                        checkneighbours(bottomleft, parentnode, sq2, request);
-                    }
-                }
-            }
-        }
-        if (!walltop && !wallright)
-        {
-            if (parentnode->m_gridPos.row + 1 < mapheight && parentnode->m_gridPos.col + 1 < mapwidth)
-            {
-                if (Node* topright = grid[parentnode->m_gridPos.row + 1][parentnode->m_gridPos.col + 1])
-                {
-                    if (!terrain->is_wall(topright->m_gridPos))
-                    {
-                        checkneighbours(topright, parentnode, sq2, request);
-                    }
-                }
-            }
-        }
-        if(!walltop && !wallleft)
-        {
-            if (parentnode->m_gridPos.row + 1 < mapheight && parentnode->m_gridPos.col - 1 >= 0)
-            {
-                if (Node* topleft = grid[parentnode->m_gridPos.row + 1][parentnode->m_gridPos.col - 1])
-                {
-                    if (!terrain->is_wall(topleft->m_gridPos))
-                    {
-                        checkneighbours(topleft, parentnode, sq2, request);
-                    }
-                }
-            }
-        }
         
 
         if (request.settings.singleStep == true)
