@@ -120,46 +120,6 @@ void Node::precomputeneighbours(const int& mapwidth, const int& mapheight)
 
 }
 
-//float AStarPather::heuristic(PathRequest& request,const GridPos& a,const GridPos& b) {
-//    float ydiff = (float)std::abs(b.row - a.row);
-//    float xdiff = (float)std::abs(b.col - a.col);
-//    switch (request.settings.heuristic)
-//    {
-//        case Heuristic::MANHATTAN:
-//        {
-//            return (float)(xdiff + ydiff);
-//            break;
-//        }
-//        case Heuristic::CHEBYSHEV:
-//        {
-//            return (float)std::max(xdiff, ydiff);
-//            break;
-//        }
-//        case Heuristic::EUCLIDEAN:
-//        {
-//            return (float)std::sqrt(xdiff*xdiff + ydiff*ydiff);
-//            break;
-//        }
-//        case Heuristic::OCTILE:
-//        {
-//            return (float)(std::min(xdiff, ydiff) * sq2 + std::max(xdiff, ydiff) - std::min(xdiff, ydiff));
-//            break;
-//        }
-//        case Heuristic::INCONSISTENT:
-//        {
-//            if ((a.row + a.col) % 2 > 0)
-//            {
-//                return  (float)std::sqrt(xdiff * xdiff + ydiff * ydiff);
-//            }
-//            return 0;
-//            break;
-//        }
-//
-//    }
-//            
-//    return 0;
-//}
-
 void AStarPather::mapchange()
 {
 
